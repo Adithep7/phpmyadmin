@@ -1,0 +1,118 @@
+mkdir project-myproduct
+cd project-myproduct
+npm init -y
+npm install express mysql2 cors dotenv
+CREATE DATABASE myproduct;
+USE myproduct;
+
+CREATE TABLE product (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(255) NOT NULL,
+    product_price DECIMAL(10,2) NOT NULL,
+    product_cost DECIMAL(10,2) NOT NULL,
+    product_image VARCHAR(255)
+);
+require("dotenv").config();
+const express = require("express");
+const mysql = require("mysql2");
+const cors = require("cors");
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const db = mysql.createConnection({
+    host: "localhost",
+    user: "root",      // เปลี่ยนเป็น user ของยูตะ
+    password: "",      // เปลี่ยนเป็นรหัสผ่านของยูตะ
+    database: "myproduct"
+});
+
+db.connect(err => {
+    if (err) {
+        console.error("MySQL connection error:", err);
+    } else {
+        console.log("✅ MySQL connected!");
+    }
+});
+
+// ✅ API ดูสินค้าทั้งหมด
+app.get("/products", (req, res) => {
+    db.query("SELECT * FROM product", (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json(result);
+    });
+});
+
+// ✅ API เพิ่มสินค้า
+app.post("/products", (req, res) => {
+    const { product_name, product_price, product_cost, product_image } = req.body;
+    db.query("INSERT INTO product (product_name, product_price, product_cost, product_image) VALUES (?, ?, ?, ?)", 
+    [product_name, product_price, product_cost, product_image], 
+    (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "✅ Product added!", id: result.insertId });
+    });
+});
+
+// ✅ API ลบสินค้า
+app.delete("/products/:id", (req, res) => {
+    db.query("DELETE FROM product WHERE id=?", [req.params.id], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ message: "✅ Product deleted!" });
+    });
+});
+
+// ✅ เปิดเซิร์ฟเวอร์
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
+npx create-react-app frontend
+cd frontend
+npm install axios react-router-dom
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+const ProductList = () => {
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        axios.get("http://localhost:3000/products")
+            .then(res => setProducts(res.data))
+            .catch(err => console.error(err));
+    }, []);
+
+    return (
+        <div>
+            <h2>📦 รายการสินค้า</h2>
+            <ul>
+                {products.map(product => (
+                    <li key={product.id}>
+                        {product.product_name} - ฿{product.product_price}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
+export default ProductList;
+import React from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import ProductList from "./components/ProductList";
+
+function App() {
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<ProductList />} />
+            </Routes>
+        </Router>
+    );
+}
+
+export default App;
+node server.js
+cd frontend
+npm start
